@@ -84,6 +84,11 @@ public class Quest
     /// </summary>
     public List<Monster> monsters;
 
+    /// <summary>
+    /// List of player-placed board markers
+    /// </summary>
+    public List<Marker> markers;
+
     // Stack of saved game state for undo
     public Stack<string> undo;
 
@@ -211,6 +216,7 @@ public class Quest
         itemSelect = new Dictionary<string, string>();
         itemInspect = new Dictionary<string, string>();
         monsters = new List<Monster>();
+        markers = new List<Marker>();
         heroSelection = new Dictionary<string, List<Hero>>();
         puzzle = new Dictionary<string, Puzzle>();
         eventQuota = new Dictionary<string, int>();
@@ -702,6 +708,7 @@ public class Quest
         boardItems = new Dictionary<string, BoardComponent>();
         ordered_boardItems = new List<string>();
         monsters = new List<Monster>();
+        markers = new List<Marker>();
         heroSelection = new Dictionary<string, List<Hero>>();
         puzzle = new Dictionary<string, Puzzle>();
         eventQuota = new Dictionary<string, int>();
@@ -902,6 +909,8 @@ public class Quest
         // Clean up everything marked as 'board'
         foreach (GameObject go in GameObject.FindGameObjectsWithTag(Game.BOARD))
             Object.Destroy(go);
+        // Clean up player markers (not tagged board, hang from the marker canvas)
+        Marker.RemoveAll();
 
         // Repopulate items on the baord
         boardItems = new Dictionary<string, BoardComponent>();
@@ -958,6 +967,7 @@ public class Quest
         // Fetch hero state
         heroes = new List<Hero>();
         monsters = new List<Monster>();
+        markers = new List<Marker>();
         int heroCount = 0;
         foreach (KeyValuePair<string, Dictionary<string, string>> kv in saveData.data)
         {
@@ -977,6 +987,15 @@ public class Quest
             if (kv.Key.IndexOf("Monster") == 0)
             {
                 monsters.Add(new Monster(kv.Value));
+            }
+        }
+
+        // Markers are independent of board components (no QuestData backing)
+        foreach (KeyValuePair<string, Dictionary<string, string>> kv in saveData.data)
+        {
+            if (kv.Key.IndexOf("Marker") == 0)
+            {
+                markers.Add(new Marker(kv.Value));
             }
         }
 
@@ -1551,6 +1570,13 @@ public class Quest
         foreach (Monster m in monsters)
         {
             r += m.ToString();
+        }
+
+        // Save player-placed markers
+        int markerId = 0;
+        foreach (Marker m in markers)
+        {
+            r += m.ToString(markerId++);
         }
 
         foreach (KeyValuePair<string, Puzzle> kv in puzzle)

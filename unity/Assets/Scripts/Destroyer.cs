@@ -59,6 +59,9 @@ public class Destroyer
 
         Game game = Game.Get();
 
+        // Clean up player-placed markers (not tagged 'board', hang from the marker canvas)
+        Marker.RemoveAll();
+
         game.audioControl.StopAudioEffect();
 
         game.heroCanvas.Clean();

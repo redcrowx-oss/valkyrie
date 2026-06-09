@@ -59,6 +59,8 @@ public class Game : MonoBehaviour
     public Canvas boardCanvas;
     // Canvas for board tokens (just above board tiles)
     public Canvas tokenCanvas;
+    // Canvas for player-placed markers (above board tokens)
+    public Canvas markerCanvas;
     // Class for management of tokens on the board
     public TokenBoard tokenBoard;
     // Class for management of hero selection panel
@@ -188,6 +190,7 @@ public class Game : MonoBehaviour
         uICanvas = GameObject.Find("UICanvas").GetComponent<Canvas>();
         boardCanvas = GameObject.Find("BoardCanvas").GetComponent<Canvas>();
         tokenCanvas = GameObject.Find("TokenCanvas").GetComponent<Canvas>();
+        markerCanvas = CreateMarkerCanvas();
         tokenBoard = FindObjectOfType<TokenBoard>();
         heroCanvas = FindObjectOfType<HeroCanvas>();
         monsterCanvas = FindObjectOfType<MonsterCanvas>();
@@ -414,6 +417,21 @@ public class Game : MonoBehaviour
         heroCanvas.EndSection();
     }
 
+    // Create a world-space canvas above the token canvas to hold player markers
+    private Canvas CreateMarkerCanvas()
+    {
+        GameObject markerCanvasObject = new GameObject("MarkerCanvas");
+        Canvas canvas = markerCanvasObject.AddComponent<Canvas>();
+        markerCanvasObject.transform.position = tokenCanvas.transform.position;
+        markerCanvasObject.transform.rotation = tokenCanvas.transform.rotation;
+        markerCanvasObject.transform.localScale = tokenCanvas.transform.localScale;
+        canvas.renderMode = tokenCanvas.renderMode;
+        canvas.worldCamera = tokenCanvas.worldCamera;
+        canvas.sortingOrder = tokenCanvas.sortingOrder + 1;
+        markerCanvasObject.AddComponent<UnityEngine.UI.GraphicRaycaster>();
+        return canvas;
+    }
+
     public void QuestStartEvent()
     {
         PlayDefaultQuestMusic();
@@ -426,6 +444,12 @@ public class Game : MonoBehaviour
         new InventoryButton();
         // Draw next stage button if required
         stageUI = new NextStageButton();
+
+        // Marker tray (Mansions of Madness only)
+        if (gameType is MoMGameType)
+        {
+            new MarkerTray();
+        }
 
         // Start round events
         CurrentQuest.eManager.EventTriggerType("StartRound", false);

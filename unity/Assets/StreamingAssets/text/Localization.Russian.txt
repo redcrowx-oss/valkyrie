@@ -560,3 +560,5 @@ SUCCESS,Успех
 IMPORT_SUCCESS,Импорт успешно завершен.
 ERROR_INVALID_ZIP_NAME,Неверное имя файла ZIP. Ожидалось: {0}
 ERROR_MISSING_IMPORT_INI,В файле ZIP отсутствует необходимый файл import.ini.
+TOKEN_TRAY,Жетоны
+TOKEN_TRAY_PLACEHOLDER,Имя / эффект

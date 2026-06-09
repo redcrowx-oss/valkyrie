@@ -761,3 +761,5 @@ SUCCESS,成功
 IMPORT_SUCCESS,インポートが正常に完了しました。
 ERROR_INVALID_ZIP_NAME,無効なZIPファイル名です。予想：{0}
 ERROR_MISSING_IMPORT_INI,ZIPファイルに必要なimport.iniファイルがありません。
+TOKEN_TRAY,トークン
+TOKEN_TRAY_PLACEHOLDER,名前 / 効果

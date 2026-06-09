@@ -29,9 +29,11 @@ When a translated string contains `{0}` placeholders (e.g. `Could not open "{0}"
   ```
 
 ### Line endings in localization files — CRITICAL
-All `Localization.*.txt` files use **Windows CRLF (`\r\n`) line endings**. The parser (`DictionaryI18n.AddDataFromFile`) splits on `\r` only. If any inserted lines use `\n`-only endings, those lines are not split and end up merged into the previous key's value — the new keys are silently ignored and the previous key gets garbage in its value.
+Line endings are **NOT uniform**: `Localization.English.txt` uses **CRLF (`\r\n`)**, but the other 12 files use **LF-only (`\n`)**. The parser (`DictionaryI18n.AddDataFromFile`) picks ONE delimiter for the whole file: `if (text.Contains('\r')) split('\r') else split('\n')`. So you MUST append using **the same line ending the target file already uses** — verify per file with `grep -q $'\r' <file>` (match → CRLF, no match → LF).
+
+Introducing a single `\r` into an otherwise LF-only file is catastrophic: the parser flips to `split('\r')`, the entire LF body collapses into one un-parseable blob, that language ends up with no usable keys, and **the whole language silently falls back to English** (not just the edited lines). This is exactly what breaks "every language shows English".
 
 **Rules:**
-- Never use PowerShell here-strings or string concatenation with bare `\n` to insert content into localization files. The Edit tool (which preserves the file's existing line endings) is safe to use.
-- If using PowerShell to modify localization files, verify line endings with a hex check afterward, and replace lone `\n` before keys with `\r\n`.
+- Detect each file's existing ending and match it; never mix. The Edit tool preserves a file's endings, so it is safe. With a shell, branch on `grep -q $'\r'` and `printf` the matching terminator.
+- After editing, verify: (a) `git diff --numstat` shows only your `+N -0` lines, and (b) the file's CR/LF class is UNCHANGED (English still CRLF, others still LF-only) — i.e. you did not introduce or remove a `\r`.
 - Each non-English file has its own **localized** value for `QUEST_NAME_UPDATE` (e.g. `[Aktualisierung]` in German, `[Mise à jour]` in French). Do not assume the English value is shared — always grep for the actual key in each file before using it as an anchor.

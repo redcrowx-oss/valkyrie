@@ -266,6 +266,12 @@ public class SaveManager
                 new SkillButton();
                 new InventoryButton();
                 game.stageUI = new NextStageButton();
+
+                // Marker tray (Mansions of Madness only)
+                if (game.gameType is MoMGameType)
+                {
+                    new MarkerTray();
+                }
             }
         }
         catch (IOException e)
