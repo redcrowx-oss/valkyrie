@@ -207,3 +207,35 @@ solo se repite si cambian las librerías.
 
 > Requisito previo: las librerías nativas del §3 ya deben estar compiladas en
 > `Plugins/`, o el build fallará igual que la compilación del editor.
+
+---
+
+## 5. Firebase desactivado (build de Android con package propio)
+
+Valkyrie usa Firebase **solo para Crashlytics** (reporte de fallos), atado al
+proyecto Firebase de upstream `valkyrie-59b81` vía `google-services.json` con el
+package `com.bruce.valkyrie`. **No afecta al gameplay** en absoluto (Analytics se
+incluye pero no se usa; las estadísticas van por Google Forms en `StatsManager.cs`).
+
+Para un APK personal con package propio (p. ej. `com.rcx.valkyrie`), Unity pide un
+"valid Bundle ID" porque el plugin de Firebase valida que coincida con
+`google-services.json`. Además, `DebugManager.Enable()` llamaba a
+`FirebaseApp.Create()` **sin try/catch** desde `Game.Awake()` (`Game.cs:179`), así
+que un mismatch de package podía romper el arranque.
+
+**Solución aplicada (nivel 1, quirúrgico):** se neutralizó el cuerpo de
+`DebugManager.Enable()` en `unity/Assets/Scripts/DebugManager.cs` (comentado, no
+borrado, para revertir fácil). Ya no se llama a Firebase ni se suscribe el captador
+de logs `HandleLog`, así que `Crashlytics.Log` nunca se ejecuta. `Game.cs` sigue
+llamando a `Enable()`, pero ahora es un no-op → sin riesgo de runtime y el package
+name queda libre.
+
+- Los AAR de Firebase siguen en `Plugins/Android/` (inertes); como mucho un AAR
+  se auto-inicializa vía ContentProvider y deja un *warning* en el log, inofensivo.
+- **No** hace falta cambiar a `com.bruce.valkyrie`; puedes usar tu propio package.
+- **Re-activar:** restaura tu propio `google-services.json` y descomenta el cuerpo
+  de `Enable()`.
+- **Nivel 2 (limpieza total, no aplicado):** quitar los paquetes Firebase de
+  `unity/Packages/manifest.json`, borrar los AAR de `Plugins/Android/` y el
+  `google-services.json`. Elimina el diálogo de Unity por completo, pero toca más
+  superficie.

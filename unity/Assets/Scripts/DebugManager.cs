@@ -6,27 +6,35 @@ public class DebugManager : MonoBehaviour
 {
     static public void Enable()
     {
-        Firebase.FirebaseApp app = Firebase.FirebaseApp.Create();
+        // Firebase/Crashlytics disabled for this personal fork. The upstream
+        // google-services.json is bound to com.bruce.valkyrie, so leaving this
+        // on would (a) report crashes to the upstream project's Firebase and
+        // (b) call the unguarded FirebaseApp.Create() below, which can throw on
+        // a bundle-ID mismatch and break startup. Disabling it frees the package
+        // name (e.g. com.rcx.valkyrie). See PARCHE_MARCADORES.md. To re-enable,
+        // restore your own google-services.json and uncomment the body.
 
-        Firebase.FirebaseApp.CheckAndFixDependenciesAsync().ContinueWith(task => {
-            var dependencyStatus = task.Result;
-            if (dependencyStatus == Firebase.DependencyStatus.Available)
-            {
-                // Create and hold a reference to your FirebaseApp,
-                // where app is a Firebase.FirebaseApp property of your application class.
-                app = Firebase.FirebaseApp.DefaultInstance;
-
-                // Set a flag here to indicate whether Firebase is ready to use by your app.
-            }
-            else
-            {
-                UnityEngine.Debug.LogError(System.String.Format(
-                  "Could not resolve all Firebase dependencies: {0}", dependencyStatus));
-                // Firebase Unity SDK is not safe to use here.
-            }
-        });
-
-        Application.logMessageReceivedThreaded += HandleLog;
+        // Firebase.FirebaseApp app = Firebase.FirebaseApp.Create();
+        //
+        // Firebase.FirebaseApp.CheckAndFixDependenciesAsync().ContinueWith(task => {
+        //     var dependencyStatus = task.Result;
+        //     if (dependencyStatus == Firebase.DependencyStatus.Available)
+        //     {
+        //         // Create and hold a reference to your FirebaseApp,
+        //         // where app is a Firebase.FirebaseApp property of your application class.
+        //         app = Firebase.FirebaseApp.DefaultInstance;
+        //
+        //         // Set a flag here to indicate whether Firebase is ready to use by your app.
+        //     }
+        //     else
+        //     {
+        //         UnityEngine.Debug.LogError(System.String.Format(
+        //           "Could not resolve all Firebase dependencies: {0}", dependencyStatus));
+        //         // Firebase Unity SDK is not safe to use here.
+        //     }
+        // });
+        //
+        // Application.logMessageReceivedThreaded += HandleLog;
     }
 
     static public void Disable()
