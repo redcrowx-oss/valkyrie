@@ -91,10 +91,23 @@ Los tres viven en `unity/Assets/Scripts/Quest/` (con sus `.meta`).
   nulos).
 - **`MarkerDrag.cs`** — `MonoBehaviour` que se engancha a cada ficha. Implementa
   `IBeginDragHandler`/`IDragHandler` (arrastre con botón izquierdo, vía
-  `cc.GetMouseBoardPlane()` + offset de agarre) y `IPointerClickHandler` (botón
-  derecho → `marker.Remove()`). **Clave:** como la ficha **no** lleva el tag
-  `Game.BOARD`, al pasar el ratón por encima `CameraController.ScrollEnabled()`
-  devuelve `false`, así que arrastrar una ficha nunca mueve/zoomea el tablero.
+  `cc.GetMouseBoardPlane()` + offset de agarre) y `IPointerClickHandler` para el
+  borrado. **Clave:** como la ficha **no** lleva el tag `Game.BOARD`, al pasar el
+  ratón por encima `CameraController.ScrollEnabled()` devuelve `false`, así que
+  arrastrar una ficha nunca mueve/zoomea el tablero.
+  **Borrado (con confirmación):**
+  - **Doble toque** (táctil): dos toques sobre el mismo marcador dentro de
+    `DoubleTapWindow` (0,3 s) y cerca en pantalla (tolerancia = 5% de la altura),
+    **sin arrastre entre medias**. Doble protección anti-accidente: (a)
+    `OnPointerClick` solo se dispara en toques que NO fueron arrastre (el
+    EventSystem invalida el click al superar el umbral de drag), y (b)
+    `OnBeginDrag` resetea el primer toque pendiente (`lastTapTime = -1`), así
+    *toque → arrastrar → toque* nunca borra. Reposicionar a toquecitos es seguro.
+  - **Clic derecho** (ratón/escritorio/editor): se mantiene.
+  - Ambos caminos abren un modal **Confirmar / Borrar (rojo) / Cancelar** antes de
+    eliminar (mismo patrón que `EditorComponent.Delete()`), reutilizando las claves
+    ya localizadas `CONFIRM`/`DELETE`/`CANCEL` de `CommonStringKeys` — **sin tocar
+    ficheros de localización**. El diálogo se cierra con `Destroyer.Dialog()`.
 - **`MarkerTray.cs`** — la bandeja en pantalla (esquina superior izquierda, libre
   en MoM porque no muestra héroes ni moral ahí). Un botón que despliega/oculta el
   panel: una fila de 5 círculos de color (investigadores), un campo de texto
