@@ -25,6 +25,29 @@ public static class GameStateReader
     private static readonly Dictionary<string, Texture2D> portraitCache = new Dictionary<string, Texture2D>();
     private static readonly Dictionary<string, Texture2D> monsterImageCache = new Dictionary<string, Texture2D>();
     private static readonly Dictionary<int, Sprite> badgeCache = new Dictionary<int, Sprite>();
+    private static readonly Dictionary<string, Texture2D> effectImageCache = new Dictionary<string, Texture2D>();
+
+    // Fixed effect catalogue. Our own stable key -> content token id (or null for
+    // effects with no art, e.g. weeds), localization key, and a fallback colour.
+    // Token art only loads if the owning content pack is imported (checked at runtime).
+    private class EffectDef
+    {
+        public string id, tokenId, nameKey, colorHex;
+        public EffectDef(string id, string tokenId, string nameKey, string colorHex)
+        {
+            this.id = id; this.tokenId = tokenId; this.nameKey = nameKey; this.colorHex = colorHex;
+        }
+    }
+
+    private static readonly EffectDef[] Effects =
+    {
+        new EffectDef("fire",     "TokenFire",     "TOKEN_FIRE",     "#E25822"),
+        new EffectDef("darkness", "TokenDarkness", "TOKEN_DARKNESS", "#311B92"),
+        new EffectDef("rift",     "TokenRift",     "TOKEN_RIFT",     "#6A1B9A"), // "Brecha dimensional"
+        new EffectDef("water",    "TokenWater",    "TOKEN_WATER",    "#1565C0"),
+        new EffectDef("weeds",    null,            "TOKEN_WEEDS",    "#2E7D32"), // no art -> always fallback
+        new EffectDef("rubble",   "TokenRubble",   "TOKEN_RUBBLE",   "#6D4C41"),
+    };
 
     // One investigator in play. `id` is the exclusivity key (stable across sessions).
     public class InvestigatorEntry
@@ -44,6 +67,15 @@ public static class GameStateReader
         public string colorHex;
         public Texture2D image;    // monster art, or null -> fallback to a colour square + label
         public Sprite badge;       // duplicate badge sprite, or null for the first instance
+    }
+
+    // One effect token. Unlimited and not subject to exclusivity, so the same six
+    // are always offered. `id` is our stable catalogue key (stored in the marker).
+    public class EffectEntry
+    {
+        public string id;          // stable key: "fire", "darkness", ...
+        public string colorHex;    // fallback colour
+        public Texture2D image;    // token art, or null -> fallback to a colour square + name
     }
 
     // Investigators in play (selected and not defeated).
@@ -166,6 +198,69 @@ public static class GameStateReader
         badgeCache[duplicate] = sprite;
         return sprite;
     }
+
+    // --- Effect tokens ---------------------------------------------------------
+
+    // The six effect tokens, in catalogue order. Art is resolved per pack at runtime.
+    public static List<EffectEntry> GetEffects()
+    {
+        List<EffectEntry> result = new List<EffectEntry>();
+        foreach (EffectDef d in Effects)
+        {
+            result.Add(new EffectEntry
+            {
+                id = d.id,
+                colorHex = d.colorHex,
+                image = GetEffectTokenImage(d.id)
+            });
+        }
+        return result;
+    }
+
+    // Token art for an effect key, or null if it has no art or its pack is not loaded.
+    public static Texture2D GetEffectTokenImage(string effectId)
+    {
+        if (string.IsNullOrEmpty(effectId)) return null;
+        if (effectImageCache.TryGetValue(effectId, out Texture2D cached)) return cached;
+
+        Texture2D texture = null;
+        EffectDef def = FindEffect(effectId);
+        if (def != null && def.tokenId != null)
+        {
+            ContentData cd = Game.Get().cd;
+            if (cd.ContainsKey<TokenData>(def.tokenId))
+            {
+                TokenData token = cd.Get<TokenData>(def.tokenId);
+                if (!string.IsNullOrEmpty(token.image))
+                {
+                    Vector2 pos = new Vector2(token.x, token.y);
+                    Vector2 size = new Vector2(token.width, token.height);
+                    texture = ContentData.FileToTexture(token.image, pos, size);
+                }
+            }
+        }
+        effectImageCache[effectId] = texture;
+        return texture;
+    }
+
+    // Localised display name for an effect key (used as the fallback label)
+    public static string GetEffectName(string effectId)
+    {
+        EffectDef def = FindEffect(effectId);
+        if (def == null) return effectId;
+        return new StringKey("val", def.nameKey).Translate();
+    }
+
+    private static EffectDef FindEffect(string id)
+    {
+        foreach (EffectDef d in Effects)
+        {
+            if (d.id == id) return d;
+        }
+        return null;
+    }
+
+    // --- Identity parsing ------------------------------------------------------
 
     // Identity is "section:duplicate"; split on the LAST ':' so a section name that
     // itself contains ':' is preserved.

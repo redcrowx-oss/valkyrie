@@ -538,3 +538,9 @@ ERROR_INVALID_ZIP_NAME,Nieprawidłowa nazwa pliku ZIP. Oczekiwano: {0}
 ERROR_MISSING_IMPORT_INI,W pliku ZIP brakuje wymaganego pliku import.ini.
 TOKEN_TRAY,Żetony
 TOKEN_TRAY_PLACEHOLDER,Nazwa / efekt
+TOKEN_FIRE,Ogień
+TOKEN_DARKNESS,Ciemność
+TOKEN_RIFT,Szczelina
+TOKEN_WATER,Woda
+TOKEN_WEEDS,Chwasty
+TOKEN_RUBBLE,Gruz

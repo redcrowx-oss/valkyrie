@@ -335,6 +335,35 @@ los gráficos planos del Bloque 3 si falta o no es legible una textura.
   badge de duplicado en la esquina (`Resources/Sprites/monster_duplicate_N`;
   `duplicate 0 = sin badge`, como el físico y `MonsterCanvas`).
 
+### Efectos y comodín (Bloque 5)
+- **Catálogo de 6 efectos** con clave estable propia en `GameStateReader.Effects`
+  (`fire`/`darkness`/`rift`/`water`/`weeds`/`rubble`), cada una mapeada a su token de
+  contenido, clave de localización y color de fallback:
+
+  | Clave | Token (pack) | i18n | Arte |
+  |---|---|---|---|
+  | `fire` | `TokenFire` (base) | `TOKEN_FIRE` | ✅ siempre |
+  | `darkness` | `TokenDarkness` (base) | `TOKEN_DARKNESS` | ✅ siempre |
+  | `rift` | `TokenRift` (hj) | `TOKEN_RIFT` "Brecha dimensional" | ✅ si pack |
+  | `water` | `TokenWater` (hj) | `TOKEN_WATER` | ✅ si pack |
+  | `rubble` | `TokenRubble` (pots) | `TOKEN_RUBBLE` | ✅ si pack |
+  | `weeds` | — | `TOKEN_WEEDS` | ❌ siempre fallback |
+
+- `GetEffectTokenImage(clave)` comprueba `ContainsKey<TokenData>(tokenId)` en runtime
+  (recorte por `x/y/width/height`) → textura o `null`. `GetEffectName(clave)` da el
+  nombre localizado, usado como etiqueta del fallback.
+- **Marcador de efecto:** `type="effect"`, `text` = clave del catálogo. Con textura →
+  arte; sin → cuadrado de color + nombre localizado (`Marker.DisplayLabel()` traduce
+  solo cuando `type==effect`). Ilimitado y **fuera de la exclusividad** (no se trackea).
+- **Bandeja:** fila plana de 6 iconos, en su propia pasada para que pasar a un
+  acordeón "Efectos +" sea solo presentación (la ruta de colocación no cambia).
+- **Comodín (decisión: Opción B):** se conserva la paleta de colores + texto libre.
+  La hebilla de Objeto común **no existe** como asset aislado (horneada en el arte de
+  carta), así que el "diseño único" del brief no aportaba nada a cambio de perder los
+  colores. Cubre objetos y cualquier cosa fuera del catálogo de efectos.
+- **Localización:** 6 claves nuevas en los 13 ficheros, respetando los finales de
+  línea (inglés CRLF, resto LF; verificado `+6 −0` por fichero).
+
 ### Estado por bloques
 - **Bloque 3 (hecho, probado):** `GameStateReader` + autopoblado de investigadores y
   monstruos + exclusividad. Mecánica validada con gráficos provisionales.
@@ -342,7 +371,7 @@ los gráficos planos del Bloque 3 si falta o no es legible una textura.
   arte de monstruo con badge de duplicado, vía `GameStateReader` con caché y
   fallback. Probado: fallback forzado con textura inexistente y arte de monstruo
   muerto que sobrevive a guardar+recargar.
-- **Bloque 5 (pendiente):** fichas de efecto (Fuego/Oscuridad en base;
-  Brecha=`TokenRift`, Agua, Escombros en expansiones — con comprobación de pack en
-  runtime y fallback) y comodín de objetos (icono horneado en carta → fallback de
-  cuadrado + texto).
+- **Bloque 5 (hecho, probado):** fichas de efecto (Fuego/Oscuridad en base;
+  Brecha=`TokenRift`, Agua, Escombros en expansiones, con comprobación de pack en
+  runtime y fallback) y comodín de objetos con paleta de colores + texto libre. V2
+  completa.

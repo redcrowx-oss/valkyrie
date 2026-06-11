@@ -563,3 +563,9 @@ ERROR_INVALID_ZIP_NAME,Недійсне ім'я файлу ZIP. Очікувал
 ERROR_MISSING_IMPORT_INI,У файлі ZIP відсутній необхідний файл import.ini.
 TOKEN_TRAY,Жетони
 TOKEN_TRAY_PLACEHOLDER,Ім'я / ефект
+TOKEN_FIRE,Вогонь
+TOKEN_DARKNESS,Темрява
+TOKEN_RIFT,Розлом
+TOKEN_WATER,Вода
+TOKEN_WEEDS,Зарості
+TOKEN_RUBBLE,Уламки

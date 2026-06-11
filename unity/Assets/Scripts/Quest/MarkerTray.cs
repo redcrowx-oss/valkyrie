@@ -129,6 +129,16 @@ public class MarkerTray
         int monsterRows = row + (col > 0 ? 1 : 0);
         if (monsterRows > 0) y += monsterRows * SwatchStep + 0.5f;
 
+        // Effect tokens: a flat row, always offered (unlimited, no exclusivity).
+        // Kept as its own pass so switching to an "Effects +" accordion later is
+        // purely presentational (the spawn path does not change).
+        List<GameStateReader.EffectEntry> effects = GameStateReader.GetEffects();
+        for (int i = 0; i < effects.Count; i++)
+        {
+            AddEffectSwatch(effects[i], ColumnX + i * SwatchStep, y);
+        }
+        if (effects.Count > 0) y += SwatchStep + 0.5f;
+
         // Wildcard: free-text label + colour squares (unchanged behaviour)
         textField = new UIElementEditable(Game.QUESTUI);
         textField.SetLocation(ColumnX, y, SquareColors.Length * SwatchStep - 0.3f, 1.4f);
@@ -199,6 +209,25 @@ public class MarkerTray
         }
     }
 
+    // Effect swatch: its token art, or a colour square if the art/pack is missing
+    private void AddEffectSwatch(GameStateReader.EffectEntry e, float x, float y)
+    {
+        UIElement ui = new UIElement(Game.QUESTUI);
+        ui.SetLocation(x, y, SwatchSize, SwatchSize);
+        if (e.image != null)
+        {
+            ui.SetImage(e.image);
+        }
+        else
+        {
+            ui.SetImage(Marker.ShapeSprite(Marker.EFFECT));
+            ui.SetBGColor(ColorUtil.ColorFromName(e.colorHex));
+        }
+        ui.SetButton(delegate { SpawnEffect(e.id, e.colorHex); });
+        new UIElementBorder(ui);
+        panel.Add(ui);
+    }
+
     // Wildcard colour square (free-text label taken from the field)
     private void AddSwatch(string type, string color, float x, float y)
     {
@@ -222,6 +251,16 @@ public class MarkerTray
         Marker marker = new Marker(type, colorHex, identity, camera.x, camera.y);
         game.CurrentQuest.markers.Add(marker);
         DrawPanel();
+    }
+
+    // Place an effect marker (catalogue key in `text`). Unlimited and outside
+    // exclusivity, so no tray refresh is needed.
+    private void SpawnEffect(string effectId, string colorHex)
+    {
+        Game game = Game.Get();
+        Vector3 camera = game.cc.gameObject.transform.position;
+        Marker marker = new Marker(Marker.EFFECT, colorHex, effectId, camera.x, camera.y);
+        game.CurrentQuest.markers.Add(marker);
     }
 
     // Place a wildcard square with the free-text label

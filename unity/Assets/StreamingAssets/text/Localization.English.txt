@@ -729,3 +729,9 @@ ERROR_INVALID_ZIP_NAME,Invalid ZIP file name. Expected: {0}
 ERROR_MISSING_IMPORT_INI,The ZIP file is missing the required import.ini file.
 TOKEN_TRAY,Tokens
 TOKEN_TRAY_PLACEHOLDER,Name / effect
+TOKEN_FIRE,Fire
+TOKEN_DARKNESS,Darkness
+TOKEN_RIFT,Rift
+TOKEN_WATER,Water
+TOKEN_WEEDS,Weeds
+TOKEN_RUBBLE,Rubble

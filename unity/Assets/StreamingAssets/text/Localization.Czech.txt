@@ -733,3 +733,9 @@ ERROR_INVALID_ZIP_NAME,Neplatný název souboru ZIP. Očekáváno: {0}
 ERROR_MISSING_IMPORT_INI,V souboru ZIP chybí požadovaný soubor import.ini.
 TOKEN_TRAY,Žetony
 TOKEN_TRAY_PLACEHOLDER,Název / efekt
+TOKEN_FIRE,Oheň
+TOKEN_DARKNESS,Tma
+TOKEN_RIFT,Trhlina
+TOKEN_WATER,Voda
+TOKEN_WEEDS,Plevel
+TOKEN_RUBBLE,Suť

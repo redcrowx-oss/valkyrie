@@ -14,6 +14,7 @@ public class Marker
     // `text` carries the entity identity used for tray exclusivity (see brief 5.3).
     public const string INVESTIGATOR = "investigator"; // circle-shaped, identity = heroData.sectionName
     public const string MONSTER = "monster";           // square-shaped, identity = "section:duplicate"
+    public const string EFFECT = "effect";             // square-shaped, identity = effect catalogue key ("fire"...)
 
     public string type;
     // Colour name or #RRGGBB, passed to ColorUtil
@@ -74,6 +75,7 @@ public class Marker
         bool drawn = false;
         if (type == INVESTIGATOR) drawn = TryDrawInvestigator();
         else if (type == MONSTER) drawn = TryDrawMonster();
+        else if (type == EFFECT) drawn = TryDrawEffect();
         if (!drawn) DrawShape();
 
         unityObject.transform.position = new Vector3(posX, posY, 0);
@@ -124,6 +126,27 @@ public class Marker
         return true;
     }
 
+    // Effect token: its art, or fallback to a colour square + localised name
+    private bool TryDrawEffect()
+    {
+        Texture2D art = GameStateReader.GetEffectTokenImage(text);
+        if (art == null) return false;
+
+        Image img = unityObject.AddComponent<Image>();
+        img.sprite = Sprite.Create(art, new Rect(0, 0, art.width, art.height), new Vector2(0.5f, 0.5f), 100);
+        img.preserveAspect = true;
+        img.rectTransform.sizeDelta = new Vector2(Size, Size);
+        return true;
+    }
+
+    // Label shown on a square fallback marker. Effects map their catalogue key to a
+    // localised name; everything else shows its raw text (wildcard label, monster id).
+    private string DisplayLabel()
+    {
+        if (type == EFFECT) return GameStateReader.GetEffectName(text);
+        return text;
+    }
+
     // Plain coloured shape (wildcard squares, and the fallback when art is missing)
     private void DrawShape()
     {
@@ -143,14 +166,15 @@ public class Marker
         fill.color = ColorUtil.ColorFromName(color);
         InsetToParent(fill.rectTransform, BorderInset);
 
-        // Square-shaped markers (wildcard + monster) show their text; circles do not,
-        // so an investigator's identity stored in `text` stays invisible.
-        if (!IsCircleShape(type) && !string.IsNullOrEmpty(text))
+        // Square-shaped markers (wildcard, monster, effect fallback) show a label;
+        // circles do not, so an investigator's identity in `text` stays invisible.
+        string labelText = DisplayLabel();
+        if (!IsCircleShape(type) && !string.IsNullOrEmpty(labelText))
         {
             GameObject labelObject = new GameObject("Label");
             labelObject.transform.SetParent(unityObject.transform);
             TextMeshProUGUI label = labelObject.AddComponent<TextMeshProUGUI>();
-            label.text = text;
+            label.text = labelText;
             label.font = GetFont();
             label.color = LabelColor(fill.color);
             label.alignment = TextAlignmentOptions.Center;

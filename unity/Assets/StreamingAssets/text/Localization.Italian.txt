@@ -506,3 +506,9 @@ ERROR_INVALID_ZIP_NAME,Nome file ZIP non valido. Previsto: {0}
 ERROR_MISSING_IMPORT_INI,Manca il file import.ini richiesto nel file ZIP.
 TOKEN_TRAY,Segnalini
 TOKEN_TRAY_PLACEHOLDER,Nome / effetto
+TOKEN_FIRE,Fuoco
+TOKEN_DARKNESS,Oscurità
+TOKEN_RIFT,Squarcio
+TOKEN_WATER,Acqua
+TOKEN_WEEDS,Erbacce
+TOKEN_RUBBLE,Macerie
