@@ -16,8 +16,15 @@ public static class GameStateReader
     private static readonly string[] InvestigatorColors =
         { "#E53935", "#43A047", "#1E88E5", "#8E24AA", "#FB8C00" };
 
-    // Provisional monster colour for Block 3 (real art + duplicate badge come in Block 4)
+    // Fallback monster colour when no art resolves (or before Block 4 art)
     private const string MonsterColor = "#9E9E9E";
+
+    // Texture caches keyed by identity, so refreshing the tray never re-reads disk
+    // nor re-scans content. (ContentData also caches by file path; this additionally
+    // skips the Values<T>() scan.) A cached null means "no art" -> fallback stays.
+    private static readonly Dictionary<string, Texture2D> portraitCache = new Dictionary<string, Texture2D>();
+    private static readonly Dictionary<string, Texture2D> monsterImageCache = new Dictionary<string, Texture2D>();
+    private static readonly Dictionary<int, Sprite> badgeCache = new Dictionary<int, Sprite>();
 
     // One investigator in play. `id` is the exclusivity key (stable across sessions).
     public class InvestigatorEntry
@@ -25,7 +32,7 @@ public static class GameStateReader
         public string id;          // heroData.sectionName — stable identity
         public string name;        // translated display name
         public string colorHex;    // deterministic assigned ring colour
-        public Texture2D portrait; // null until Block 4
+        public Texture2D portrait; // raw portrait, or null -> tray/board fall back to a colour circle
     }
 
     // One live monster instance. `id` is the exclusivity key.
@@ -35,7 +42,8 @@ public static class GameStateReader
         public string name;        // translated display name
         public int duplicate;      // 0 = first instance (no badge), 1.. = duplicates
         public string colorHex;
-        public Texture2D image;    // null until Block 4
+        public Texture2D image;    // monster art, or null -> fallback to a colour square + label
+        public Sprite badge;       // duplicate badge sprite, or null for the first instance
     }
 
     // Investigators in play (selected and not defeated).
@@ -67,7 +75,7 @@ public static class GameStateReader
                 id = h.heroData.sectionName,
                 name = h.heroData.name.Translate(),
                 colorHex = InvestigatorColors[slot % InvestigatorColors.Length],
-                portrait = null
+                portrait = GetInvestigatorPortrait(h.heroData.sectionName)
             });
         }
         return result;
@@ -84,15 +92,97 @@ public static class GameStateReader
         foreach (Quest.Monster m in quest.monsters)
         {
             if (m.monsterData == null) continue;
+            string id = m.GetIdentifier();
             result.Add(new MonsterEntry
             {
-                id = m.GetIdentifier(),
+                id = id,
                 name = m.monsterData.name.Translate(),
                 duplicate = m.duplicate,
                 colorHex = MonsterColor,
-                image = null
+                image = GetMonsterImage(id),
+                badge = GetMonsterBadge(id)
             });
         }
         return result;
+    }
+
+    // --- Texture resolution by identity (cached) -------------------------------
+    // Art is resolved from the content TYPE, not the live instance, so a marker's
+    // image survives the entity's death (ContentData keeps the type) and a reload.
+
+    // Investigator portrait by stable identity (heroData.sectionName)
+    public static Texture2D GetInvestigatorPortrait(string sectionName)
+    {
+        if (string.IsNullOrEmpty(sectionName)) return null;
+        if (portraitCache.TryGetValue(sectionName, out Texture2D cached)) return cached;
+
+        Texture2D texture = null;
+        foreach (HeroData hd in Game.Get().cd.Values<HeroData>())
+        {
+            if (hd.sectionName == sectionName)
+            {
+                if (!string.IsNullOrEmpty(hd.image)) texture = ContentData.FileToTexture(hd.image);
+                break;
+            }
+        }
+        portraitCache[sectionName] = texture;
+        return texture;
+    }
+
+    // Monster art by identity ("section:duplicate"), resolved from the monster type
+    public static Texture2D GetMonsterImage(string identifier)
+    {
+        string section = SectionOf(identifier);
+        if (string.IsNullOrEmpty(section)) return null;
+        if (monsterImageCache.TryGetValue(section, out Texture2D cached)) return cached;
+
+        Texture2D texture = null;
+        foreach (MonsterData md in Game.Get().cd.Values<MonsterData>())
+        {
+            if (md.sectionName == section)
+            {
+                if (!string.IsNullOrEmpty(md.image)) texture = ContentData.FileToTexture(md.image);
+                break;
+            }
+        }
+        monsterImageCache[section] = texture;
+        return texture;
+    }
+
+    // Duplicate badge sprite ("sprites/monster_duplicate_N"); null for the first
+    // instance (duplicate 0), matching the physical ID-token system and MonsterCanvas.
+    public static Sprite GetMonsterBadge(string identifier)
+    {
+        int duplicate = DuplicateOf(identifier);
+        if (duplicate <= 0) return null;
+        if (badgeCache.TryGetValue(duplicate, out Sprite cached)) return cached;
+
+        Sprite sprite = null;
+        Texture2D tex = Resources.Load("sprites/monster_duplicate_" + duplicate) as Texture2D;
+        if (tex != null)
+        {
+            sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), Vector2.zero, 1);
+        }
+        badgeCache[duplicate] = sprite;
+        return sprite;
+    }
+
+    // Identity is "section:duplicate"; split on the LAST ':' so a section name that
+    // itself contains ':' is preserved.
+    private static string SectionOf(string identifier)
+    {
+        if (string.IsNullOrEmpty(identifier)) return identifier;
+        int i = identifier.LastIndexOf(':');
+        return i < 0 ? identifier : identifier.Substring(0, i);
+    }
+
+    private static int DuplicateOf(string identifier)
+    {
+        if (string.IsNullOrEmpty(identifier)) return 0;
+        int i = identifier.LastIndexOf(':');
+        if (i < 0) return 0;
+        int d = 0;
+        int.TryParse(identifier.Substring(i + 1), out d);
+        return d;
     }
 }

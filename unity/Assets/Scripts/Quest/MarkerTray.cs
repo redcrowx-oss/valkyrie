@@ -111,7 +111,7 @@ public class MarkerTray
         foreach (GameStateReader.InvestigatorEntry e in GameStateReader.GetActiveInvestigators())
         {
             if (placedInvestigators.Contains(e.id)) continue;
-            AddEntitySwatch(Marker.INVESTIGATOR, e.colorHex, e.id, "", ColumnX + col * SwatchStep, y);
+            AddInvestigatorSwatch(e, ColumnX + col * SwatchStep, y);
             col++;
         }
         if (col > 0) y += SwatchStep + 0.5f;
@@ -122,7 +122,7 @@ public class MarkerTray
         foreach (GameStateReader.MonsterEntry e in GameStateReader.GetActiveMonsters())
         {
             if (placedMonsters.Contains(e.id)) continue;
-            AddEntitySwatch(Marker.MONSTER, e.colorHex, e.id, e.name, ColumnX + col * SwatchStep, y + row * SwatchStep);
+            AddMonsterSwatch(e, ColumnX + col * SwatchStep, y + row * SwatchStep);
             col++;
             if (col >= MaxPerRow) { col = 0; row++; }
         }
@@ -145,24 +145,58 @@ public class MarkerTray
         }
     }
 
-    // Auto-populated entity swatch: tinted shape + optional short label. Spawns a
-    // marker that remembers its identity (in `text`), so exclusivity survives a reload.
-    private void AddEntitySwatch(string type, string colorHex, string identity, string label, float x, float y)
+    // Investigator swatch: the same circular portrait token as the board marker,
+    // or a colour circle if the portrait is missing/unreadable (fallback).
+    private void AddInvestigatorSwatch(GameStateReader.InvestigatorEntry e, float x, float y)
     {
         UIElement ui = new UIElement(Game.QUESTUI);
         ui.SetLocation(x, y, SwatchSize, SwatchSize);
-        ui.SetImage(Marker.ShapeSprite(type));
-        ui.SetBGColor(ColorUtil.ColorFromName(colorHex));
-        if (!string.IsNullOrEmpty(label))
+
+        Texture2D token = (e.portrait != null)
+            ? Marker.BuildInvestigatorToken(e.id + "|" + e.colorHex, e.portrait, ColorUtil.ColorFromName(e.colorHex))
+            : null;
+        if (token != null)
         {
-            ui.SetText(label, Color.black);
+            ui.SetImage(token);
         }
-        ui.SetButton(delegate { SpawnEntity(type, colorHex, identity); });
-        if (type == Marker.MONSTER)
+        else
         {
-            new UIElementBorder(ui);
+            ui.SetImage(Marker.ShapeSprite(Marker.INVESTIGATOR));
+            ui.SetBGColor(ColorUtil.ColorFromName(e.colorHex));
         }
+        ui.SetButton(delegate { SpawnEntity(Marker.INVESTIGATOR, e.colorHex, e.id); });
         panel.Add(ui);
+    }
+
+    // Monster swatch: its art with the duplicate badge in the corner, or a colour
+    // square + name label if the art is missing (fallback).
+    private void AddMonsterSwatch(GameStateReader.MonsterEntry e, float x, float y)
+    {
+        UIElement ui = new UIElement(Game.QUESTUI);
+        ui.SetLocation(x, y, SwatchSize, SwatchSize);
+        if (e.image != null)
+        {
+            ui.SetImage(e.image);
+        }
+        else
+        {
+            ui.SetImage(Marker.ShapeSprite(Marker.MONSTER));
+            ui.SetBGColor(ColorUtil.ColorFromName(e.colorHex));
+            ui.SetText(e.name, Color.black);
+        }
+        ui.SetButton(delegate { SpawnEntity(Marker.MONSTER, e.colorHex, e.id); });
+        new UIElementBorder(ui);
+        panel.Add(ui);
+
+        // Duplicate badge overlay in the bottom-right corner (a small dead spot for
+        // the spawn button, but the rest of the swatch stays clickable).
+        if (e.badge != null)
+        {
+            UIElement badge = new UIElement(Game.QUESTUI);
+            badge.SetLocation(x + SwatchSize * 0.55f, y + SwatchSize * 0.55f, SwatchSize * 0.45f, SwatchSize * 0.45f);
+            badge.SetImage(e.badge);
+            panel.Add(badge);
+        }
     }
 
     // Wildcard colour square (free-text label taken from the field)

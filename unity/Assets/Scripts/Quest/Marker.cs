@@ -28,9 +28,16 @@ public class Marker
     private const float Size = 0.8f;
     private const float BorderInset = 0.07f;
 
+    // Circular investigator token: texture resolution and ring band thickness
+    private const int TokenTexSize = 128;
+    private const float RingFraction = 0.14f; // ring width as a fraction of the radius
+
     private static Sprite circleSprite;
     private static Sprite squareSprite;
     private static TMP_FontAsset fontAsset;
+
+    // Baked investigator tokens (ring + circular portrait), cached by identity+colour
+    private static readonly Dictionary<string, Texture2D> tokenCache = new Dictionary<string, Texture2D>();
 
     public Marker(string type, string color, string text, float posX, float posY)
     {
@@ -57,11 +64,70 @@ public class Marker
     private void Draw()
     {
         Game game = Game.Get();
-        Sprite shape = IsCircleShape(type) ? GetCircleSprite() : GetSquareSprite();
 
         unityObject = new GameObject("Marker");
         unityObject.transform.SetParent(game.markerCanvas.transform);
         unityObject.transform.SetAsLastSibling();
+
+        // Art layer (Block 4): portrait / monster art. Any missing or unreadable
+        // texture falls back to the plain coloured shape (Block 3 look).
+        bool drawn = false;
+        if (type == INVESTIGATOR) drawn = TryDrawInvestigator();
+        else if (type == MONSTER) drawn = TryDrawMonster();
+        if (!drawn) DrawShape();
+
+        unityObject.transform.position = new Vector3(posX, posY, 0);
+
+        MarkerDrag drag = unityObject.AddComponent<MarkerDrag>();
+        drag.marker = this;
+    }
+
+    // Investigator: a circular portrait inside a ring of the assigned colour
+    private bool TryDrawInvestigator()
+    {
+        Texture2D portrait = GameStateReader.GetInvestigatorPortrait(text);
+        if (portrait == null) return false;
+        Texture2D token = BuildInvestigatorToken(text + "|" + color, portrait, ColorUtil.ColorFromName(color));
+        if (token == null) return false; // unreadable texture -> fallback
+
+        Image img = unityObject.AddComponent<Image>();
+        img.sprite = Sprite.Create(token, new Rect(0, 0, token.width, token.height), new Vector2(0.5f, 0.5f), 100);
+        img.rectTransform.sizeDelta = new Vector2(Size, Size);
+        return true;
+    }
+
+    // Monster: its art (aspect-preserved) with a duplicate badge in the corner
+    private bool TryDrawMonster()
+    {
+        Texture2D art = GameStateReader.GetMonsterImage(text);
+        if (art == null) return false;
+
+        Image img = unityObject.AddComponent<Image>();
+        img.sprite = Sprite.Create(art, new Rect(0, 0, art.width, art.height), new Vector2(0.5f, 0.5f), 100);
+        img.preserveAspect = true; // monster art is not square; keep the whole rect clickable
+        img.rectTransform.sizeDelta = new Vector2(Size, Size);
+
+        Sprite badge = GameStateReader.GetMonsterBadge(text);
+        if (badge != null)
+        {
+            GameObject badgeObject = new GameObject("Badge");
+            badgeObject.transform.SetParent(unityObject.transform);
+            Image badgeImg = badgeObject.AddComponent<Image>();
+            badgeImg.sprite = badge;
+            badgeImg.raycastTarget = false;
+            RectTransform rt = badgeImg.rectTransform;
+            rt.sizeDelta = new Vector2(Size * 0.45f, Size * 0.45f);
+            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(1f, 0f); // bottom-right corner
+            rt.anchoredPosition = Vector2.zero;
+            rt.localScale = Vector3.one;
+        }
+        return true;
+    }
+
+    // Plain coloured shape (wildcard squares, and the fallback when art is missing)
+    private void DrawShape()
+    {
+        Sprite shape = IsCircleShape(type) ? GetCircleSprite() : GetSquareSprite();
 
         // Contrast border: the shape drawn dark behind a slightly smaller colour fill
         Image border = unityObject.AddComponent<Image>();
@@ -94,11 +160,77 @@ public class Marker
             label.fontSizeMax = 0.4f;
             InsetToParent(label.rectTransform, BorderInset * 1.5f);
         }
+    }
 
-        unityObject.transform.position = new Vector3(posX, posY, 0);
+    // Build (and cache) a circular investigator token: a colour ring around the
+    // portrait, clipped to a circle. Pure texture maths so Marker stays decoupled
+    // from Valkyrie content (the raw portrait comes from GameStateReader).
+    public static Texture2D BuildInvestigatorToken(string cacheKey, Texture2D portrait, Color ringColor)
+    {
+        if (portrait == null) return null;
+        if (tokenCache.TryGetValue(cacheKey, out Texture2D cached)) return cached;
 
-        MarkerDrag drag = unityObject.AddComponent<MarkerDrag>();
-        drag.marker = this;
+        Texture2D token = null;
+        try
+        {
+            token = ComposeCircularToken(portrait, ringColor);
+        }
+        catch (UnityException)
+        {
+            token = null; // portrait not readable -> caller falls back to a colour circle
+        }
+        tokenCache[cacheKey] = token;
+        return token;
+    }
+
+    private static Texture2D ComposeCircularToken(Texture2D portrait, Color ringColor)
+    {
+        int size = TokenTexSize;
+        float radius = size / 2f;
+        float ringInner = radius * (1f - RingFraction);
+
+        // Centre-crop the portrait to a square so the circle is not stretched
+        int side = Mathf.Min(portrait.width, portrait.height);
+        int ox = (portrait.width - side) / 2;
+        int oy = (portrait.height - side) / 2;
+        Color[] src = portrait.GetPixels(ox, oy, side, side); // throws if unreadable -> caught above
+
+        Texture2D token = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        Color[] dst = new Color[size * size];
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float dx = x - radius + 0.5f;
+                float dy = y - radius + 0.5f;
+                float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                float edge = Mathf.Clamp01(radius - dist); // soft 1px outer rim
+                if (edge <= 0f)
+                {
+                    dst[y * size + x] = new Color(0, 0, 0, 0);
+                    continue;
+                }
+
+                Color c;
+                if (dist > ringInner)
+                {
+                    c = ringColor;
+                }
+                else
+                {
+                    int sx = Mathf.Clamp((int)(x / (float)size * side), 0, side - 1);
+                    int sy = Mathf.Clamp((int)(y / (float)size * side), 0, side - 1);
+                    c = src[sy * side + sx];
+                    c.a = 1f;
+                }
+                c.a *= edge;
+                dst[y * size + x] = c;
+            }
+        }
+        token.SetPixels(dst);
+        token.Apply();
+        token.wrapMode = TextureWrapMode.Clamp;
+        return token;
     }
 
     // Shared shape sprites, reused by the tray swatches

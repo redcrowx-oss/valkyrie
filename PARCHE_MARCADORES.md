@@ -316,13 +316,32 @@ recomputa el mismo orden → mismo color → mapeo reproducible entre sesiones.
   (autopoblado + exclusividad). El save mantiene exactamente las mismas claves
   (`type/color/text/posX/posY`).
 
+### Capa estética (Bloque 4)
+Resuelve el arte **a través de `GameStateReader`**, con caché por identidad (no
+relee disco ni reescanea contenido en cada refresco de la bandeja) y **fallback** a
+los gráficos planos del Bloque 3 si falta o no es legible una textura.
+- **Resolución por TIPO, no por instancia viva:** `GetMonsterImage(identifier)` y
+  `GetInvestigatorPortrait(sectionName)` buscan el `MonsterData`/`HeroData` iterando
+  `cd.Values<T>()` por `sectionName` (patrón del repo). Consecuencia clave: el arte
+  de un monstruo **sobrevive a su muerte** y al guardar/recargar (el tipo sigue en
+  `ContentData` aunque la instancia ya no esté en `CurrentQuest.monsters`).
+- **Identificador** parseado por **`LastIndexOf(':')`** (un `sectionName` con dos
+  puntos se conserva).
+- **Investigador:** token circular cacheado = aro del color asignado + retrato
+  recortado en círculo (bake procedural por pixel en `Marker.BuildInvestigatorToken`
+  / `ComposeCircularToken`, con guardia `try/catch` → si la textura no es legible,
+  fallback). El mismo token se usa en bandeja y tablero (consistencia).
+- **Monstruo:** arte (`preserveAspect`, todo el rect sigue siendo zona de toque) +
+  badge de duplicado en la esquina (`Resources/Sprites/monster_duplicate_N`;
+  `duplicate 0 = sin badge`, como el físico y `MonsterCanvas`).
+
 ### Estado por bloques
 - **Bloque 3 (hecho, probado):** `GameStateReader` + autopoblado de investigadores y
-  monstruos + exclusividad, con **gráficos provisionales** (círculos de color y
-  cuadrados grises con el identificador como texto). Valida la mecánica sin arte.
-- **Bloque 4 (pendiente):** capa estética — retratos con aro de color y arte de
-  monstruo con badge de duplicado (`Resources/Sprites/monster_duplicate_1..6`), todo
-  vía `GameStateReader.GetInvestigatorPortrait` / `GetMonsterImage`.
+  monstruos + exclusividad. Mecánica validada con gráficos provisionales.
+- **Bloque 4 (hecho, probado PC + Android):** capa estética — retratos con aro y
+  arte de monstruo con badge de duplicado, vía `GameStateReader` con caché y
+  fallback. Probado: fallback forzado con textura inexistente y arte de monstruo
+  muerto que sobrevive a guardar+recargar.
 - **Bloque 5 (pendiente):** fichas de efecto (Fuego/Oscuridad en base;
   Brecha=`TokenRift`, Agua, Escombros en expansiones — con comprobación de pack en
   runtime y fallback) y comodín de objetos (icono horneado en carta → fallback de
