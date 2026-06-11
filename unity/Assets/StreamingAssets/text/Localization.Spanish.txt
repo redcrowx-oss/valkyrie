@@ -571,3 +571,4 @@ TOKEN_RIFT,Brecha dimensional
 TOKEN_WATER,Agua
 TOKEN_WEEDS,Maleza
 TOKEN_RUBBLE,Escombros
+TOKEN_RESTRAINT,Contención

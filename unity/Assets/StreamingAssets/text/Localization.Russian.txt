@@ -568,3 +568,4 @@ TOKEN_RIFT,Разлом
 TOKEN_WATER,Вода
 TOKEN_WEEDS,Заросли
 TOKEN_RUBBLE,Обломки
+TOKEN_RESTRAINT,Удержание

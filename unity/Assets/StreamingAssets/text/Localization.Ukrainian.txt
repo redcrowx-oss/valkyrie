@@ -569,3 +569,4 @@ TOKEN_RIFT,Розлом
 TOKEN_WATER,Вода
 TOKEN_WEEDS,Зарості
 TOKEN_RUBBLE,Уламки
+TOKEN_RESTRAINT,Стримування

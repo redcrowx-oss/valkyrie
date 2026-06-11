@@ -338,32 +338,38 @@ los gráficos planos del Bloque 3 si falta o no es legible una textura.
   original +20%, para igualar a los tokens de tablero del motor). Un solo número.
 
 ### Efectos y comodín (Bloque 5)
-- **Catálogo de 6 efectos** con clave estable propia en `GameStateReader.Effects`
-  (`fire`/`darkness`/`rift`/`water`/`weeds`/`rubble`), cada una mapeada a su token de
+- **Catálogo de 7 efectos** con clave estable propia en `GameStateReader.Effects`
+  (`fire`/`darkness`/`rift`/`water`/`weeds`/`rubble`/`restraint`), cada una mapeada a su token de
   contenido, clave de localización y color de fallback:
 
-  | Clave | Token (pack) | i18n | Arte |
+  | Clave | Fuente del arte | i18n | Arte |
   |---|---|---|---|
-  | `fire` | `TokenFire` (base) | `TOKEN_FIRE` | ✅ siempre |
-  | `darkness` | `TokenDarkness` (base) | `TOKEN_DARKNESS` | ✅ siempre |
-  | `rift` | `TokenRift` (hj) | `TOKEN_RIFT` "Brecha dimensional" | ✅ si pack |
-  | `water` | `TokenWater` (hj) | `TOKEN_WATER` | ✅ si pack |
-  | `rubble` | `TokenRubble` (pots) | `TOKEN_RUBBLE` | ✅ si pack |
-  | `weeds` | `TokenOvergrowth` (pots) | `TOKEN_WEEDS` | ✅ si pack (`img/overgrowth_token`) |
+  | `fire` | token `TokenFire` (base) | `TOKEN_FIRE` | ✅ siempre |
+  | `darkness` | token `TokenDarkness` (base) | `TOKEN_DARKNESS` | ✅ siempre |
+  | `rift` | token `TokenRift` (hj) | `TOKEN_RIFT` "Brecha dimensional" | ✅ si pack |
+  | `water` | token `TokenWater` (hj) | `TOKEN_WATER` | ✅ si pack |
+  | `rubble` | token `TokenRubble` (pots) | `TOKEN_RUBBLE` | ✅ si pack |
+  | `weeds` | **Resource** `Sprites/effect_weeds` | `TOKEN_WEEDS` | ✅ siempre (empaquetada) |
+  | `restraint` | **Resource** `Sprites/effect_restraint` | `TOKEN_RESTRAINT` "Contención" | ✅ siempre (empaquetada) |
 
-- `GetEffectTokenImage(clave)` comprueba `ContainsKey<TokenData>(tokenId)` en runtime
-  (recorte por `x/y/width/height`) → textura o `null`. `GetEffectName(clave)` da el
-  nombre localizado, usado como etiqueta del fallback.
+- **Dos fuentes de arte:** una `EffectDef` puede traer una **imagen empaquetada**
+  (`resourceName` en `Resources/`, siempre disponible) y/o un **token de contenido**
+  (`tokenId`, dependiente de pack). `GetEffectTokenImage(clave)` prueba primero el
+  Resource (`Resources.Load(...) as Texture2D`) y, si no, el token
+  (`ContainsKey<TokenData>` + recorte). `weeds` y `restraint` usan imágenes propias
+  empaquetadas en `unity/Assets/Resources/Sprites/effect_*.png` (256×256, importadas
+  como las de `monster_duplicate`), así se ven **siempre**, haya o no expansión.
+- `GetEffectName(clave)` da el nombre localizado, usado como etiqueta del fallback.
 - **Marcador de efecto:** `type="effect"`, `text` = clave del catálogo. Con textura →
   arte; sin → cuadrado de color + nombre localizado (`Marker.DisplayLabel()` traduce
   solo cuando `type==effect`). Ilimitado y **fuera de la exclusividad** (no se trackea).
-- **Bandeja:** fila plana de 6 iconos, en su propia pasada para que pasar a un
+- **Bandeja:** fila plana de 7 iconos, en su propia pasada para que pasar a un
   acordeón "Efectos +" sea solo presentación (la ruta de colocación no cambia).
 - **Comodín (decisión: Opción B):** se conserva la paleta de colores + texto libre.
   La hebilla de Objeto común **no existe** como asset aislado (horneada en el arte de
   carta), así que el "diseño único" del brief no aportaba nada a cambio de perder los
   colores. Cubre objetos y cualquier cosa fuera del catálogo de efectos.
-- **Localización:** 6 claves nuevas en los 13 ficheros, respetando los finales de
+- **Localización:** 7 claves (`TOKEN_FIRE`…`TOKEN_RUBBLE` + `TOKEN_RESTRAINT`) en los 13 ficheros, respetando los finales de
   línea (inglés CRLF, resto LF; verificado `+6 −0` por fichero).
 
 ### Estado por bloques
@@ -417,6 +423,6 @@ privado y eres el único que usa la rama.
 - Tras resolver, compila (recordando el build de librerías nativas del §3 y borrar el
   `UnityEngine.dll` que se cuela en `Plugins/`) y prueba antes de pushear.
 
-**Si upstream toca localización:** los 6 `TOKEN_*` y `TOKEN_TRAY`/`_PLACEHOLDER` son
+**Si upstream toca localización:** los 7 `TOKEN_*` (efectos) y `TOKEN_TRAY`/`_PLACEHOLDER` son
 líneas añadidas al final de cada `Localization.*.txt`; respeta el final de línea de
 cada fichero (inglés CRLF, resto LF) al resolver — ver la nota del §2.

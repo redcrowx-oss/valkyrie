@@ -32,21 +32,25 @@ public static class GameStateReader
     // Token art only loads if the owning content pack is imported (checked at runtime).
     private class EffectDef
     {
-        public string id, tokenId, nameKey, colorHex;
-        public EffectDef(string id, string tokenId, string nameKey, string colorHex)
+        public string id, tokenId, resourceName, nameKey, colorHex;
+        // resourceName: a bundled texture in Resources (always available, no pack needed),
+        // tried before the content token. Null = resolve only from the content token.
+        public EffectDef(string id, string tokenId, string nameKey, string colorHex, string resourceName = null)
         {
             this.id = id; this.tokenId = tokenId; this.nameKey = nameKey; this.colorHex = colorHex;
+            this.resourceName = resourceName;
         }
     }
 
     private static readonly EffectDef[] Effects =
     {
-        new EffectDef("fire",     "TokenFire",     "TOKEN_FIRE",     "#E25822"),
-        new EffectDef("darkness", "TokenDarkness", "TOKEN_DARKNESS", "#311B92"),
-        new EffectDef("rift",     "TokenRift",     "TOKEN_RIFT",     "#6A1B9A"), // "Brecha dimensional"
-        new EffectDef("water",    "TokenWater",    "TOKEN_WATER",    "#1565C0"),
-        new EffectDef("weeds",    "TokenOvergrowth", "TOKEN_WEEDS",  "#2E7D32"), // art in pots expansion; else fallback
-        new EffectDef("rubble",   "TokenRubble",   "TOKEN_RUBBLE",   "#6D4C41"),
+        new EffectDef("fire",      "TokenFire",     "TOKEN_FIRE",      "#E25822"),
+        new EffectDef("darkness",  "TokenDarkness", "TOKEN_DARKNESS",  "#311B92"),
+        new EffectDef("rift",      "TokenRift",     "TOKEN_RIFT",      "#6A1B9A"), // "Brecha dimensional"
+        new EffectDef("water",     "TokenWater",    "TOKEN_WATER",     "#1565C0"),
+        new EffectDef("weeds",     null,            "TOKEN_WEEDS",     "#2E7D32", "Sprites/effect_weeds"),     // bundled (always shown)
+        new EffectDef("rubble",    "TokenRubble",   "TOKEN_RUBBLE",    "#6D4C41"),
+        new EffectDef("restraint", null,            "TOKEN_RESTRAINT", "#B71C1C", "Sprites/effect_restraint"), // bundled (always shown)
     };
 
     // One investigator in play. `id` is the exclusivity key (stable across sessions).
@@ -225,17 +229,26 @@ public static class GameStateReader
 
         Texture2D texture = null;
         EffectDef def = FindEffect(effectId);
-        if (def != null && def.tokenId != null)
+        if (def != null)
         {
-            ContentData cd = Game.Get().cd;
-            if (cd.ContainsKey<TokenData>(def.tokenId))
+            // Bundled image in Resources first (always available, no content pack needed)
+            if (def.resourceName != null)
             {
-                TokenData token = cd.Get<TokenData>(def.tokenId);
-                if (!string.IsNullOrEmpty(token.image))
+                texture = Resources.Load(def.resourceName) as Texture2D;
+            }
+            // Otherwise the content token, only if its pack is imported
+            if (texture == null && def.tokenId != null)
+            {
+                ContentData cd = Game.Get().cd;
+                if (cd.ContainsKey<TokenData>(def.tokenId))
                 {
-                    Vector2 pos = new Vector2(token.x, token.y);
-                    Vector2 size = new Vector2(token.width, token.height);
-                    texture = ContentData.FileToTexture(token.image, pos, size);
+                    TokenData token = cd.Get<TokenData>(def.tokenId);
+                    if (!string.IsNullOrEmpty(token.image))
+                    {
+                        Vector2 pos = new Vector2(token.x, token.y);
+                        Vector2 size = new Vector2(token.width, token.height);
+                        texture = ContentData.FileToTexture(token.image, pos, size);
+                    }
                 }
             }
         }
