@@ -18,6 +18,10 @@ public class MarkerTray
     private const float ToggleY = 0.5f;
     private const float SwatchSize = 1.4f;
     private const float SwatchStep = 1.7f;
+    // Investigators sit alone on the top row with room to spare, so their swatches
+    // are drawn 25% larger to be readable before the tray is expanded.
+    private const float InvSwatchSize = SwatchSize * 1.25f;
+    private const float InvSwatchStep = SwatchStep * 1.25f;
     private const float ToggleWidth = 5f;
     private const int MaxPerRow = 7;
 
@@ -111,10 +115,15 @@ public class MarkerTray
         foreach (GameStateReader.InvestigatorEntry e in GameStateReader.GetActiveInvestigators())
         {
             if (placedInvestigators.Contains(e.id)) continue;
-            AddInvestigatorSwatch(e, ColumnX + col * SwatchStep, y);
+            AddInvestigatorSwatch(e, ColumnX + col * InvSwatchStep, y);
             col++;
         }
-        if (col > 0) y += SwatchStep + 0.5f;
+        if (col > 0)
+        {
+            // "Deploy all" button after the last investigator (there's room to spare)
+            AddDeployAllButton(ColumnX + col * InvSwatchStep, y);
+            y += InvSwatchStep + 0.5f;
+        }
 
         // Live monster instances, not yet on the board (wraps every MaxPerRow)
         col = 0;
@@ -160,7 +169,7 @@ public class MarkerTray
     private void AddInvestigatorSwatch(GameStateReader.InvestigatorEntry e, float x, float y)
     {
         UIElement ui = new UIElement(Game.QUESTUI);
-        ui.SetLocation(x, y, SwatchSize, SwatchSize);
+        ui.SetLocation(x, y, InvSwatchSize, InvSwatchSize);
 
         Texture2D token = (e.portrait != null)
             ? Marker.BuildInvestigatorToken(e.id + "|" + e.colorHex, e.portrait, ColorUtil.ColorFromName(e.colorHex))
@@ -176,6 +185,57 @@ public class MarkerTray
         }
         ui.SetButton(delegate { SpawnEntity(Marker.INVESTIGATOR, e.colorHex, e.id); });
         panel.Add(ui);
+    }
+
+    // ">" button that drops every still-undeployed investigator onto the board at once
+    private void AddDeployAllButton(float x, float y)
+    {
+        UIElement ui = new UIElement(Game.QUESTUI);
+        ui.SetLocation(x, y, InvSwatchSize, InvSwatchSize);
+        ui.SetText(">");
+        ui.SetFont(Game.Get().gameType.GetHeaderFont());
+        ui.SetFontSize(UIScaler.GetMediumFont());
+        ui.SetButton(DeployAllInvestigators);
+        new UIElementBorder(ui);
+        panel.Add(ui);
+    }
+
+    // Place all investigators still in the tray, spread out around the camera centre
+    // so they do not land exactly on top of each other.
+    private void DeployAllInvestigators()
+    {
+        Game game = Game.Get();
+        HashSet<string> placed = new HashSet<string>();
+        foreach (Marker m in game.CurrentQuest.markers)
+        {
+            if (m.type == Marker.INVESTIGATOR) placed.Add(m.text);
+        }
+
+        List<GameStateReader.InvestigatorEntry> toDeploy = new List<GameStateReader.InvestigatorEntry>();
+        foreach (GameStateReader.InvestigatorEntry e in GameStateReader.GetActiveInvestigators())
+        {
+            if (!placed.Contains(e.id)) toDeploy.Add(e);
+        }
+
+        Vector3 camera = game.cc.gameObject.transform.position;
+        int n = toDeploy.Count;
+        const float radius = 1.3f;
+        for (int i = 0; i < n; i++)
+        {
+            GameStateReader.InvestigatorEntry e = toDeploy[i];
+            float px = camera.x;
+            float py = camera.y;
+            if (n > 1)
+            {
+                // Even ring around the camera centre, starting at the top
+                float angle = Mathf.PI / 2f + 2f * Mathf.PI * i / n;
+                px += radius * Mathf.Cos(angle);
+                py += radius * Mathf.Sin(angle);
+            }
+            Marker marker = new Marker(Marker.INVESTIGATOR, e.colorHex, e.id, px, py);
+            game.CurrentQuest.markers.Add(marker);
+        }
+        DrawPanel();
     }
 
     // Monster swatch: its art with the duplicate badge in the corner, or a colour

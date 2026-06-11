@@ -365,6 +365,16 @@ los gráficos planos del Bloque 3 si falta o no es legible una textura.
   solo cuando `type==effect`). Ilimitado y **fuera de la exclusividad** (no se trackea).
 - **Bandeja:** fila plana de 7 iconos, en su propia pasada para que pasar a un
   acordeón "Efectos +" sea solo presentación (la ruta de colocación no cambia).
+
+### Retoques de bandeja
+- **Swatches de investigador 25% más grandes** que el resto (`InvSwatchSize`/
+  `InvSwatchStep` en `MarkerTray`): su fila va sola con sitio de sobra, así se
+  distinguen antes de desplegarlos. Solo afecta a la bandeja; los marcadores del
+  tablero usan `Marker.Size`.
+- **Botón ">" de "desplegar todos"** al final de la fila de investigadores: coloca de
+  golpe los que queden en la bandeja, en **círculo** alrededor del centro de cámara
+  (`DeployAllInvestigators`, radio 1.3 u.; uno solo → al centro). Solo aparece si
+  queda alguno por desplegar.
 - **Comodín (decisión: Opción B):** se conserva la paleta de colores + texto libre.
   La hebilla de Objeto común **no existe** como asset aislado (horneada en el arte de
   carta), así que el "diseño único" del brief no aportaba nada a cambio de perder los
