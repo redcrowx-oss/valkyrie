@@ -377,3 +377,46 @@ los gráficos planos del Bloque 3 si falta o no es legible una textura.
   Brecha=`TokenRift`, Agua, Escombros en expansiones, con comprobación de pack en
   runtime y fallback) y comodín de objetos con paleta de colores + texto libre. V2
   completa.
+
+---
+
+## 7. Cómo actualizar desde NPBruce (upstream) sin perder el fork
+
+**Modelo de ramas (mantenerlo así):**
+- **`master` = espejo intocable de upstream NPBruce.** Nunca se commitea nada propio
+  ahí; siempre avanza en *fast-forward*, sin conflictos jamás.
+- **`feature/mom-board-markers` = rama canónica del fork** (V1 + V2). Todo el trabajo
+  propio vive aquí. Es la rama que se compila y de la que se generan los builds.
+- Remotos: `origin` = tu fork (`redcrowx-oss/valkyrie`); `upstream` = `NPBruce/valkyrie`.
+
+**Receta cuando NPBruce publique una versión nueva:**
+```bash
+git fetch upstream
+git checkout master
+git merge --ff-only upstream/master        # master sigue siendo espejo limpio
+git checkout feature/mom-board-markers
+git rebase master                          # reaplica tus commits sobre la base nueva
+# resolver conflictos (ver abajo), compilar en Unity, probar
+git push --force-with-lease origin feature/mom-board-markers
+```
+El `rebase` reescribe el historial de tu rama (tus commits se reaplican encima de la
+base nueva), por eso el push necesita `--force-with-lease`. Es seguro: es un fork
+privado y eres el único que usa la rama.
+
+**Dónde aparecerán los conflictos (y dónde NO):**
+- **NO dan conflicto** los ficheros 100% nuestros: `GameStateReader.cs`, `Marker.cs`,
+  `MarkerTray.cs`, `MarkerDrag.cs` (y sus `.meta`). Git los reaplica tal cual.
+- **Pueden dar conflicto** solo los 5 ficheros core donde insertamos ganchos. Para
+  resolverlos, reaplica exactamente lo que documenta **§1** (V1) y **§6** (huella V2):
+  - `Game.cs` — campo `markerCanvas` + `CreateMarkerCanvas()` + `new MarkerTray()`.
+  - `Quest.cs` — campo `markers`, init en 3 sitios, `RemoveAll()`, barrido `[MarkerN]`,
+    serialización en `ToString`.
+  - `SaveManager.cs` — `new MarkerTray()` en el camino de carga.
+  - `Destroyer.cs` — `Marker.RemoveAll()` en `Destroy()`.
+  - `DebugManager.cs` — `Enable()` neutralizado (Firebase, §5).
+- Tras resolver, compila (recordando el build de librerías nativas del §3 y borrar el
+  `UnityEngine.dll` que se cuela en `Plugins/`) y prueba antes de pushear.
+
+**Si upstream toca localización:** los 6 `TOKEN_*` y `TOKEN_TRAY`/`_PLACEHOLDER` son
+líneas añadidas al final de cada `Localization.*.txt`; respeta el final de línea de
+cada fichero (inglés CRLF, resto LF) al resolver — ver la nota del §2.
