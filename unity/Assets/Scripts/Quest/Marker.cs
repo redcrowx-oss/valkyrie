@@ -10,6 +10,10 @@ public class Marker
 {
     public const string CIRCLE = "circle";
     public const string SQUARE = "square";
+    // Auto-populated entity markers. They reuse the existing INI fields (no new keys):
+    // `text` carries the entity identity used for tray exclusivity (see brief 5.3).
+    public const string INVESTIGATOR = "investigator"; // circle-shaped, identity = heroData.sectionName
+    public const string MONSTER = "monster";           // square-shaped, identity = "section:duplicate"
 
     public string type;
     // Colour name or #RRGGBB, passed to ColorUtil
@@ -53,7 +57,7 @@ public class Marker
     private void Draw()
     {
         Game game = Game.Get();
-        Sprite shape = (type == CIRCLE) ? GetCircleSprite() : GetSquareSprite();
+        Sprite shape = IsCircleShape(type) ? GetCircleSprite() : GetSquareSprite();
 
         unityObject = new GameObject("Marker");
         unityObject.transform.SetParent(game.markerCanvas.transform);
@@ -73,7 +77,9 @@ public class Marker
         fill.color = ColorUtil.ColorFromName(color);
         InsetToParent(fill.rectTransform, BorderInset);
 
-        if (type == SQUARE && !string.IsNullOrEmpty(text))
+        // Square-shaped markers (wildcard + monster) show their text; circles do not,
+        // so an investigator's identity stored in `text` stays invisible.
+        if (!IsCircleShape(type) && !string.IsNullOrEmpty(text))
         {
             GameObject labelObject = new GameObject("Label");
             labelObject.transform.SetParent(unityObject.transform);
@@ -98,7 +104,13 @@ public class Marker
     // Shared shape sprites, reused by the tray swatches
     public static Sprite ShapeSprite(string type)
     {
-        return type == CIRCLE ? GetCircleSprite() : GetSquareSprite();
+        return IsCircleShape(type) ? GetCircleSprite() : GetSquareSprite();
+    }
+
+    // Circle-shaped marker types (round shapes); everything else draws as a square
+    private static bool IsCircleShape(string type)
+    {
+        return type == CIRCLE || type == INVESTIGATOR;
     }
 
     public void SetPosition(float x, float y)
@@ -112,6 +124,8 @@ public class Marker
     {
         Game.Get().CurrentQuest.markers.Remove(this);
         Object.Destroy(unityObject);
+        // An entity left the board: let the tray re-offer it (if open). Our event only.
+        MarkerTray.NotifyBoardChanged();
     }
 
     // Destroy every placed marker (markers hang from the marker canvas, not tagged

@@ -252,3 +252,78 @@ name queda libre.
   `unity/Packages/manifest.json`, borrar los AAR de `Plugins/Android/` y el
   `google-services.json`. Elimina el diálogo de Unity por completo, pero toca más
   superficie.
+
+---
+
+## 6. V2 — Autopoblado de la bandeja (rama `feature/mom-markers-v2`)
+
+La V2 hace que la bandeja **se rellene sola** con los investigadores y monstruos
+en partida, en lugar de ofrecer colores fijos. Desarrollada en bloques; el
+**Bloque 3** (lógica) ya está implementado y probado. Se parte de
+`feature/mom-board-markers` (la V1, en producción) para no tocarla.
+
+### Pieza central: `GameStateReader.cs` (adaptador único)
+- Fichero nuevo en `unity/Assets/Scripts/Quest/`. Es el **único** punto del código
+  de marcadores que lee clases internas de Valkyrie (`Quest`, `Quest.Hero`,
+  `Quest.Monster`, `ContentData`…). `Marker`/`MarkerTray` hablan **solo** con él.
+- Expone DTOs propios (`InvestigatorEntry`, `MonsterEntry`) — ningún tipo de
+  Valkyrie se filtra a la UI. Si una versión futura de NPBruce renombra un campo o
+  cambia cómo se resuelven texturas, **se parchea solo este fichero**.
+- `GetActiveInvestigators()`: héroes con `heroData != null && !defeated`.
+- `GetActiveMonsters()`: cada instancia de `CurrentQuest.monsters`.
+
+### Color de investigador determinista (clave para la persistencia)
+El color se deriva del **rango del héroe al ordenar por `hero.id`** (entero estable,
+persistido en el save como `id=`) sobre el roster completo (derrotados incluidos,
+para que el slot **no se desplace** si alguien cae). Nunca del orden de creación de
+las fichas ni de la posición en la lista (que se reconstruye en load). En carga se
+recomputa el mismo orden → mismo color → mapeo reproducible entre sesiones.
+
+### Exclusividad bandeja ↔ tablero (estado derivado, §5.3 del brief)
+- Regla: **bandeja = (entidades activas) − (ya colocadas en el tablero)**.
+- La identidad de cada entidad va en el campo **`text`** del marcador (reutilizado,
+  **cero claves nuevas** en el save):
+  - Investigador: `text = heroData.sectionName`; `type = "investigator"` (forma
+    círculo; el `text` no se pinta, identidad invisible).
+  - Monstruo: `text = GetIdentifier()` (`"section:duplicate"`); `type = "monster"`
+    (forma cuadrado).
+  - Saves viejos solo traen `type = circle/square` → cargan igual (retrocompatible).
+- `MarkerTray.DrawPanel()` calcula los "ya colocados" leyendo `CurrentQuest.markers`
+  por `type`+`text`. Como la identidad se persiste en `text`, **la exclusividad
+  sobrevive a guardar/cargar**.
+
+### Refresco de la bandeja (sin ganchos en código de NPBruce)
+- La bandeja se reconstruye **solo en eventos nuestros**: al abrir el panel y tras
+  colocar (`SpawnEntity` → `DrawPanel`) o borrar (`Marker.Remove()` →
+  `MarkerTray.NotifyBoardChanged()`) un marcador.
+- **Decisión explícita:** NO se engancha nada en el código de Valkyrie (cada hook es
+  un punto de rotura en futuros merges). Si la bandeja abierta se queda
+  desactualizada al morir/spawnear un monstruo, el usuario la cierra y la reabre.
+
+### Decisiones de diseño conocidas (no son bugs)
+- **Respawn con marcador huérfano:** si un monstruo muere con su marcador aún en el
+  tablero y luego aparece otra instancia con el **mismo `GetIdentifier()`**, la
+  bandeja la verá como "ya colocada" y no la ofrecerá. Solución: el usuario borra el
+  marcador viejo. Aceptado.
+- **Monstruo muerto:** desaparece de la bandeja (ya no está activo) pero **su
+  marcador en el tablero NO se toca** — lo borra el usuario a mano. El motor jamás
+  toca el tablero.
+
+### Huella en el core de la V2
+- **Cero** ficheros nuevos de Valkyrie modificados respecto a la V1. Solo cambian
+  ficheros nuestros: `GameStateReader.cs` (nuevo), `Marker.cs` (nuevos *valores* de
+  `type`, sin claves nuevas; aviso a la bandeja en `Remove()`), `MarkerTray.cs`
+  (autopoblado + exclusividad). El save mantiene exactamente las mismas claves
+  (`type/color/text/posX/posY`).
+
+### Estado por bloques
+- **Bloque 3 (hecho, probado):** `GameStateReader` + autopoblado de investigadores y
+  monstruos + exclusividad, con **gráficos provisionales** (círculos de color y
+  cuadrados grises con el identificador como texto). Valida la mecánica sin arte.
+- **Bloque 4 (pendiente):** capa estética — retratos con aro de color y arte de
+  monstruo con badge de duplicado (`Resources/Sprites/monster_duplicate_1..6`), todo
+  vía `GameStateReader.GetInvestigatorPortrait` / `GetMonsterImage`.
+- **Bloque 5 (pendiente):** fichas de efecto (Fuego/Oscuridad en base;
+  Brecha=`TokenRift`, Agua, Escombros en expansiones — con comprobación de pack en
+  runtime y fallback) y comodín de objetos (icono horneado en carta → fallback de
+  cuadrado + texto).
