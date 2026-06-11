@@ -334,6 +334,8 @@ los gráficos planos del Bloque 3 si falta o no es legible una textura.
 - **Monstruo:** arte (`preserveAspect`, todo el rect sigue siendo zona de toque) +
   badge de duplicado en la esquina (`Resources/Sprites/monster_duplicate_N`;
   `duplicate 0 = sin badge`, como el físico y `MonsterCanvas`).
+- **Tamaño:** todas las fichas del tablero usan `Marker.Size = 0.96` u. (el 0.8
+  original +20%, para igualar a los tokens de tablero del motor). Un solo número.
 
 ### Efectos y comodín (Bloque 5)
 - **Catálogo de 6 efectos** con clave estable propia en `GameStateReader.Effects`
@@ -347,7 +349,7 @@ los gráficos planos del Bloque 3 si falta o no es legible una textura.
   | `rift` | `TokenRift` (hj) | `TOKEN_RIFT` "Brecha dimensional" | ✅ si pack |
   | `water` | `TokenWater` (hj) | `TOKEN_WATER` | ✅ si pack |
   | `rubble` | `TokenRubble` (pots) | `TOKEN_RUBBLE` | ✅ si pack |
-  | `weeds` | — | `TOKEN_WEEDS` | ❌ siempre fallback |
+  | `weeds` | `TokenOvergrowth` (pots) | `TOKEN_WEEDS` | ✅ si pack (`img/overgrowth_token`) |
 
 - `GetEffectTokenImage(clave)` comprueba `ContainsKey<TokenData>(tokenId)` en runtime
   (recorte por `x/y/width/height`) → textura o `null`. `GetEffectName(clave)` da el

@@ -25,8 +25,9 @@ public class Marker
 
     public GameObject unityObject;
 
-    // Marker size and contrast border thickness, in board units
-    private const float Size = 0.8f;
+    // Marker size and contrast border thickness, in board units.
+    // 0.96 = the original 0.8 bumped 20% so markers match the engine's board tokens.
+    private const float Size = 0.96f;
     private const float BorderInset = 0.07f;
 
     // Circular investigator token: texture resolution and ring band thickness

@@ -45,7 +45,7 @@ public static class GameStateReader
         new EffectDef("darkness", "TokenDarkness", "TOKEN_DARKNESS", "#311B92"),
         new EffectDef("rift",     "TokenRift",     "TOKEN_RIFT",     "#6A1B9A"), // "Brecha dimensional"
         new EffectDef("water",    "TokenWater",    "TOKEN_WATER",    "#1565C0"),
-        new EffectDef("weeds",    null,            "TOKEN_WEEDS",    "#2E7D32"), // no art -> always fallback
+        new EffectDef("weeds",    "TokenOvergrowth", "TOKEN_WEEDS",  "#2E7D32"), // art in pots expansion; else fallback
         new EffectDef("rubble",   "TokenRubble",   "TOKEN_RUBBLE",   "#6D4C41"),
     };
 
