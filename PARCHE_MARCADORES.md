@@ -95,7 +95,10 @@ Los tres viven en `unity/Assets/Scripts/Quest/` (con sus `.meta`).
   borrado. **Clave:** como la ficha **no** lleva el tag `Game.BOARD`, al pasar el
   ratón por encima `CameraController.ScrollEnabled()` devuelve `false`, así que
   arrastrar una ficha nunca mueve/zoomea el tablero.
-  **Borrado (con confirmación):**
+  **Borrado (inmediato, sin confirmación):** un marcador se vuelve a sacar de la
+  bandeja en un instante, así que el diálogo de confirmación estorbaba más que
+  ayudaba (lo pedía probar una partida completa). Tanto el doble toque como el clic
+  derecho **borran directamente** (`marker.Remove()`):
   - **Doble toque** (táctil): dos toques sobre el mismo marcador dentro de
     `DoubleTapWindow` (0,3 s) y cerca en pantalla (tolerancia = 5% de la altura),
     **sin arrastre entre medias**. Doble protección anti-accidente: (a)
@@ -104,10 +107,6 @@ Los tres viven en `unity/Assets/Scripts/Quest/` (con sus `.meta`).
     `OnBeginDrag` resetea el primer toque pendiente (`lastTapTime = -1`), así
     *toque → arrastrar → toque* nunca borra. Reposicionar a toquecitos es seguro.
   - **Clic derecho** (ratón/escritorio/editor): se mantiene.
-  - Ambos caminos abren un modal **Confirmar / Borrar (rojo) / Cancelar** antes de
-    eliminar (mismo patrón que `EditorComponent.Delete()`), reutilizando las claves
-    ya localizadas `CONFIRM`/`DELETE`/`CANCEL` de `CommonStringKeys` — **sin tocar
-    ficheros de localización**. El diálogo se cierra con `Destroyer.Dialog()`.
 - **`MarkerTray.cs`** — la bandeja en pantalla (esquina superior izquierda, libre
   en MoM porque no muestra héroes ni moral ahí). Un botón que despliega/oculta el
   panel: una fila de 5 círculos de color (investigadores), un campo de texto
@@ -255,12 +254,13 @@ name queda libre.
 
 ---
 
-## 6. V2 — Autopoblado de la bandeja (rama `feature/mom-markers-v2`)
+## 6. V2 — Autopoblado de la bandeja
 
 La V2 hace que la bandeja **se rellene sola** con los investigadores y monstruos
-en partida, en lugar de ofrecer colores fijos. Desarrollada en bloques; el
-**Bloque 3** (lógica) ya está implementado y probado. Se parte de
-`feature/mom-board-markers` (la V1, en producción) para no tocarla.
+en partida, en lugar de ofrecer colores fijos. Desarrollada en bloques (3, 4 y 5,
+todos completos y probados). Se desarrolló en una rama aparte (`feature/mom-markers-v2`)
+para no tocar la V1, y **ya está fusionada** en `feature/mom-board-markers`: hoy
+toda la función (V1 + V2 + retoques) vive en esa única rama canónica del fork.
 
 ### Pieza central: `GameStateReader.cs` (adaptador único)
 - Fichero nuevo en `unity/Assets/Scripts/Quest/`. Es el **único** punto del código
@@ -371,10 +371,18 @@ los gráficos planos del Bloque 3 si falta o no es legible una textura.
   `InvSwatchStep` en `MarkerTray`): su fila va sola con sitio de sobra, así se
   distinguen antes de desplegarlos. Solo afecta a la bandeja; los marcadores del
   tablero usan `Marker.Size`.
-- **Botón ">" de "desplegar todos"** al final de la fila de investigadores: coloca de
+- **Botón "desplegar todos"** al final de la fila de investigadores: coloca de
   golpe los que queden en la bandeja, en **círculo** alrededor del centro de cámara
   (`DeployAllInvestigators`, radio 1.3 u.; uno solo → al centro). Solo aparece si
-  queda alguno por desplegar.
+  queda alguno por desplegar. Usa una **textura de flecha empaquetada**
+  (`Resources/Sprites/deploy_arrow.png`, importada como las demás) en vez del carácter
+  `>` para encajar con la bandeja ya llena de arte; si la textura faltara, cae al glifo
+  `>` con borde (a prueba de fallos).
+- **Ancho del botón de la bandeja adaptable al idioma:** el botón que despliega la
+  bandeja mide el texto **ya traducido** con su fuente/tamaño
+  (`UIElement.GetStringWidth`) y ajusta su ancho a ese valor + margen, con `ToggleWidth`
+  (5 u.) como **mínimo**. Así idiomas largos (p. ej. italiano "Segnalini") no se cortan
+  y los cortos se ven igual que antes. Hay sitio de sobra a la izquierda en MoM.
 - **Comodín (decisión: Opción B):** se conserva la paleta de colores + texto libre.
   La hebilla de Objeto común **no existe** como asset aislado (horneada en el arte de
   carta), así que el "diseño único" del brief no aportaba nada a cambio de perder los
