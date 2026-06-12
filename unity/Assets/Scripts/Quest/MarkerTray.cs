@@ -62,7 +62,11 @@ public class MarkerTray
     {
         Game game = Game.Get();
         toggle = new UIElement(Game.QUESTUI);
-        toggle.SetLocation(ColumnX, ToggleY, ToggleWidth, 2);
+        // Width follows the translated label (plus a small margin) so long languages
+        // like Italian are never clipped; ToggleWidth stays the minimum for short ones.
+        float textWidth = toggle.GetStringWidth(TOKEN_TRAY, UIScaler.GetMediumFont(), game.gameType.GetHeaderFont());
+        float width = Mathf.Max(ToggleWidth, textWidth + 1f);
+        toggle.SetLocation(ColumnX, ToggleY, width, 2);
         toggle.SetText(TOKEN_TRAY);
         toggle.SetFont(game.gameType.GetHeaderFont());
         toggle.SetFontSize(UIScaler.GetMediumFont());
@@ -187,16 +191,26 @@ public class MarkerTray
         panel.Add(ui);
     }
 
-    // ">" button that drops every still-undeployed investigator onto the board at once
+    // Right-arrow button that drops every still-undeployed investigator onto the board
+    // at once. Uses a bundled glyph texture so it matches the art-rich tray instead of
+    // a bare ">" character; falls back to the text glyph if the texture is missing.
     private void AddDeployAllButton(float x, float y)
     {
         UIElement ui = new UIElement(Game.QUESTUI);
         ui.SetLocation(x, y, InvSwatchSize, InvSwatchSize);
-        ui.SetText(">");
-        ui.SetFont(Game.Get().gameType.GetHeaderFont());
-        ui.SetFontSize(UIScaler.GetMediumFont());
+        Texture2D arrow = Resources.Load("Sprites/deploy_arrow") as Texture2D;
+        if (arrow != null)
+        {
+            ui.SetImage(arrow);
+        }
+        else
+        {
+            ui.SetText(">");
+            ui.SetFont(Game.Get().gameType.GetHeaderFont());
+            ui.SetFontSize(UIScaler.GetMediumFont());
+            new UIElementBorder(ui);
+        }
         ui.SetButton(DeployAllInvestigators);
-        new UIElementBorder(ui);
         panel.Add(ui);
     }
 
