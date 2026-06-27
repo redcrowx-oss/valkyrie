@@ -188,16 +188,20 @@ UnityEngine.CoreModule y en UnityEngine") en Unity. Bórralo **cada vez**:
 rm -f unity/Assets/Plugins/UnityEngine.dll unity/Assets/Plugins/UnityEngine.dll.meta
 ```
 (Está *gitignored*; el `build.ps1` oficial hace el mismo `Remove-Item`.) En
-`Plugins/` deben quedar solo las **9** DLL reales: ValkyrieTools, FFGAppImport +
-las 7 originales (Ionic.Zip.Unity, K4os.Compression.LZ4, System.Buffers,
-System.IO.Compression, System.Memory, System.Numerics.Vectors,
-System.Runtime.CompilerServices.Unsafe).
+`Plugins/` deben quedar solo las **8** DLL reales: ValkyrieTools, FFGAppImport +
+las 6 originales (Ionic.Zip.Unity, K4os.Compression.LZ4, System.Buffers,
+System.Memory, System.Numerics.Vectors, System.Runtime.CompilerServices.Unsafe).
 
-### Error benigno
-Al arrancar verás `Loading assembly failed: Assets/Plugins/System.IO.Compression.dll`.
-Es una de las 7 DLL **originales** del repo (idéntica byte a byte a git, no la
-regenera el build): una *facade* compilada en Windows que Mono no sabe parsear.
-Su `.meta` tiene el Editor desactivado. **Es inofensivo** — el modo Play funciona.
+> **Cambio en 3.28:** upstream eliminó `System.IO.Compression.dll` (+ su `.meta`)
+> del repo por duplicada (commit "remove duplicate compression DLL"). Antes eran 9
+> DLL; ahora son 8. La referencia se resuelve desde el framework de Unity/Mono, así
+> que el build sigue dando 0 errores sin esa DLL.
+
+### Error benigno (ya no aplica desde 3.28)
+En versiones **anteriores a la 3.28** se veía al arrancar `Loading assembly failed:
+Assets/Plugins/System.IO.Compression.dll` — una *facade* compilada en Windows que
+Mono no sabía parsear, inofensiva. Desde la 3.28 esa DLL ya no existe (ver recuadro
+de arriba), así que el aviso **desaparece**.
 
 ### Tras el build
 Enfoca Unity (o *Assets ▸ Reimport All*) para que recompile. Es un *setup* único;
